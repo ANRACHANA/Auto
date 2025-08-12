@@ -36,7 +36,7 @@ REPLIES = {
     'en':
     "Hello <b><u><font color='blue'>{first} {last}</font></u></b>\nTime: {time}",
     'default':
-    "សួស្តី  @{first}{last}​យើងខ្ញុំនិងតបសារឆាប់ៗនេះ សូមអធ្យាស្រ័យចំពោះការឆ្លើយតបយឺតយ៉ាវ ។ I will reply shortly. Sorry for the delayed response. Thank you 💙🙏😊",
+    "សួស្តី  @{first}{last}​យើងខ្ញុំនិងតបសារឆាប់ៗនេះ សូមអធ្យាស្រ័យចំពោះការឆ្លើយតបយឺតយ៉ាវ ។ I will reply shortly. Sorry for the delayed response. Thank you 💙🙏",
 }
 
 keep_alive()
@@ -92,3 +92,4 @@ async def handler(event):
 print("🤖 Bot is running...")
 
 bot.run_until_disconnected()
+
