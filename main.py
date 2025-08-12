@@ -1,72 +1,159 @@
-import asyncio
 from telethon import TelegramClient, events, Button
-from datetime import datetime, timedelta
+import os
+from langdetect import detect, DetectorFactory
+from datetime import datetime, date
+import asyncio
 
-api_id = 28013497
-api_hash = '3bd0587beedb80c8336bdea42fc67e27'
-bot_token = '7619774036:AAH9PLMNaw5Vjc7ujp8EPKq9P47KXl2gXNY'
+DetectorFactory.seed = 0
 
-target_group = 'auto_reply_Gr'
-facebook_page = "https://www.facebook.com/share/1FaBZ3ZCWW/?mibextid=wwXIfr"
-telegram_channel = "https://t.me/vanna_sovanna"
-admins = ['vanna_sovanna', 'rachana0308']
+API_ID = int(os.getenv('API_ID', '28013497'))
+API_HASH = os.getenv('API_HASH', '3bd0587beedb80c8336bdea42fc67e27')
+BOT_TOKEN = os.getenv('BOT_TOKEN', '7045596311:AAH7tHcSt16thbFpL0JsVNSEHBvKtjnK8sk')
 
-bot = TelegramClient('bot_session', api_id, api_hash).start(bot_token=bot_token)
-chat_language = {}
-user_last_reply = {}
+OWNER_USERNAME = 'yourownerusername'  # ប្ដូរតាមអ្នក
+ADMIN_LIST = ['adminname2', 'anotheradmin']
 
-menu_text = {
-    'km': "សួស្តីបងៗ! ​យើងខ្ញុំនិងតបសារឆាប់ៗនេះ សូមអធ្យាស្រ័យចំពោះការឆ្លើយតបយឺតយ៉ាវ។ សូមអរគុណ 💙🙏៖",
-    'en': "Hello everyone! I will reply shortly. Sorry for the delayed response. Thank you 💙🙏",
-    'zh': "大家好！我会很快回复。抱歉回复得晚了。谢谢💙🙏"
+REPLIES = {
+    'km': "សួស្តី {first} {last} 😊",
+    'en': "Hello <b><u><font color='blue'>{first} {last}</font></u></b>\nTime: {time}",
+    'default': "Hello {first} {last} 😊",
 }
 
-def get_group_buttons():
-    return [[
-        Button.url("📘 Facebook Page", facebook_page),
-        Button.url("📢 Telegram Admin", telegram_channel)
+CONTACT_OPTIONS = [
+    [Button.inline('💬 Telegram', b'telegram')],
+    [Button.inline('💬 WeChat', b'wechat')],
+    [Button.inline('📧 Email', b'email')],
+    [Button.inline('📞 Phone', b'phone')],
+    [Button.inline('🔙 Back', b'back_to_main')]
+]
+
+def disabled_contact_options():
+    return [
+        [Button.inline('💬 Telegram', b'noop', ignored=True)],
+        [Button.inline('💬 WeChat', b'noop', ignored=True)],
+        [Button.inline('📧 Email', b'noop', ignored=True)],
+        [Button.inline('📞 Phone', b'noop', ignored=True)],
+        [Button.inline('🔙 Back', b'noop', ignored=True)]
+    ]
+
+user_last_reply = {}
+last_reply_messages = {}
+
+bot = TelegramClient('bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
+
+async def send_main_message(event, sender):
+    first_name = sender.first_name if sender else ""
+    last_name = sender.last_name if sender else ""
+    if last_name is None:
+        last_name = ""
+
+    now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        lang = detect(event.message.message)
+        if lang not in ['km', 'en']:
+            lang = 'default'
+    except:
+        lang = 'default'
+
+    reply_text = REPLIES.get(lang, REPLIES['default']).format(
+        first=first_name,
+        last=last_name,
+        time=now_time
+    )
+
+    buttons = [[
+        Button.url('🌐 Visit Website', 'https://example.com'),
+        Button.inline('📞 Contact Us', b'open_contact')
     ]]
 
-def detect_language_by_text(text: str) -> str:
-    for ch in text:
-        if '\u1780' <= ch <= '\u17FF':
-            return 'km'
-        elif '\u4E00' <= ch <= '\u9FFF':
-            return 'zh'
-        elif ('a' <= ch.lower() <= 'z'):
-            return 'en'
-    return 'km'
+    msg = await event.reply(
+        reply_text,
+        buttons=buttons,
+        parse_mode='html'
+    )
+    return msg
 
-@bot.on(events.NewMessage)
-async def handle_group_message(event):
-    chat = await event.get_chat()
-    if not event.is_group or getattr(chat, 'username', '') != target_group:
-        return
-
+@bot.on(events.NewMessage(pattern='(?i).*'))
+async def handler(event):
     sender = await event.get_sender()
-    if sender is None:
+    user_id = sender.id if sender else None
+    try:
+        username = sender.username.lower() if sender and sender.username else ""
+    except:
+        username = ""
+
+    if username == OWNER_USERNAME.lower():
+        print(f"[LOG] Message ពី owner @{username} មិនឆ្លើយតប។")
+        return
+    if username in [admin.lower() for admin in ADMIN_LIST]:
+        print(f"[LOG] Message ពី admin @{username} មិនឆ្លើយតប។")
         return
 
-    user_id = sender.id
-    username = (sender.username or "").lower()
-    if username in [a.lower() for a in admins]:
+    today_str = date.today().isoformat()
+
+    if user_id in user_last_reply and user_last_reply[user_id] == today_str:
+        print(f"[LOG] User {user_id} បានឆ្លើយសារមួយរួចហើយថ្ងៃនេះ។ មិនឆ្លើយទៀត។")
         return
 
-    now = datetime.utcnow()
-    key = (event.chat_id, user_id)
-    last_reply_time = user_last_reply.get(key)
-    if last_reply_time and now - last_reply_time < timedelta(hours=24):
+    msg = await send_main_message(event, sender)
+
+    user_last_reply[user_id] = today_str
+    last_reply_messages[user_id] = msg
+
+@bot.on(events.CallbackQuery)
+async def callback_handler(event):
+    data = event.data
+    sender = await event.get_sender()
+    user_id = sender.id if sender else None
+
+    if data == b'noop':
+        await event.answer('', alert=False)
         return
 
-    message_text = event.raw_text or ""
-    lang = detect_language_by_text(message_text)
-    chat_language[event.chat_id] = lang
+    if data == b'open_contact':
+        msg = await event.edit(
+            "📞 សូមជ្រើសរើសមធ្យោបាយទំនាក់ទំនង៖",
+            buttons=CONTACT_OPTIONS
+        )
+        await asyncio.sleep(60)
+        try:
+            await msg.edit("📞 សូមជ្រើសរើសមធ្យោបាយទំនាក់ទំនង៖ (menu closed)", buttons=disabled_contact_options())
+        except:
+            pass
+        await asyncio.sleep(60)
+        try:
+            await msg.edit("📞 សូមជ្រើសរើសមធ្យោបាយទំនាក់ទំនង៖", buttons=CONTACT_OPTIONS)
+        except:
+            pass
 
-    await event.reply(menu_text.get(lang, menu_text['en']),
-                      buttons=get_group_buttons(),
-                      parse_mode='md')
+    elif data == b'back_to_main':
+        if user_id in last_reply_messages:
+            try:
+                await last_reply_messages[user_id].edit(
+                    last_reply_messages[user_id].message,
+                    buttons=[[
+                        Button.url('🌐 Visit Website', 'https://example.com'),
+                        Button.inline('📞 Contact Us', b'open_contact')
+                    ]],
+                    parse_mode='html'
+                )
+            except:
+                await send_main_message(event, sender)
+        else:
+            await send_main_message(event, sender)
 
-    user_last_reply[key] = now
+    elif data == b'telegram':
+        await event.answer('Telegram: https://t.me/yourtelegramusername', alert=True)
+
+    elif data == b'wechat':
+        await event.answer('WeChat ID: yourwechatid', alert=True)
+
+    elif data == b'email':
+        await event.answer('Email: youremail@example.com', alert=True)
+
+    elif data == b'phone':
+        await event.answer('Phone: +1234567890', alert=True)
 
 print("🤖 Bot is running...")
 bot.run_until_disconnected()
