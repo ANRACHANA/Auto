@@ -34,6 +34,7 @@ def ping_self(url):
 API_ID = int(os.getenv("API_ID", "28013497"))
 API_HASH = os.getenv("API_HASH", "3bd0587beedb80c8336bdea42fc67e27")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "7045596311:AAH7tHcSt16thbFpL0JsVNSEHBvKtjnK8sk")
+APP_URL = os.getenv("APP_URL", "https://auto-4-glod.onrender.com")  # https://your-render-url.onrender.com
 
 if not all([API_ID, API_HASH, BOT_TOKEN, APP_URL]):
     print("Error: Missing one or more environment variables: API_ID, API_HASH, BOT_TOKEN, APP_URL")
