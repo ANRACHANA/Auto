@@ -10,8 +10,8 @@ API_ID = int(os.getenv("API_ID", "28013497"))
 API_HASH = os.getenv("API_HASH", "3bd0587beedb80c8336bdea42fc67e27")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "7045596311:AAH7tHcSt16thbFpL0JsVNSEHBvKtjnK8sk")
 
-OWNER_USERNAME = ""          # username របស់ Owner (គ្មាន @)
-ADMIN_USERNAMES = ["", ""]    # username របស់ Admin (គ្មាន @)
+OWNER_USERNAME = "owner_username"          # username របស់ Owner (គ្មាន @)
+ADMIN_USERNAMES = ["admin1", "admin2"]    # username របស់ Admin (គ្មាន @)
 
 FACEBOOK_URL = "https://facebook.com/YOUR_PAGE"
 CONTACT_URL = "https://t.me/YOUR_USERNAME"
@@ -48,7 +48,8 @@ def start_bot():
         if sender_username == OWNER_USERNAME.lower() or sender_username in [u.lower() for u in ADMIN_USERNAMES]:
             return
 
-        if event.is_private and not event.out:
+        # reply ទៅ private ឬ group
+        if not event.out:  # មិន reply តទៅ message របស់ bot
             await event.reply(
                 "សួស្តី! ជ្រើសរើសប៊ូតុងខាងក្រោម៖",
                 buttons=[
