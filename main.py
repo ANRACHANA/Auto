@@ -13,8 +13,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "7045596311:AAH7tHcSt16thbFpL0JsVNSEHBvKtjnK8
 OWNER_USERNAME = "owner_username"          # username របស់ Owner (គ្មាន @)
 ADMIN_USERNAMES = ["admin1", "admin2"]    # username របស់ Admin (គ្មាន @)
 
-FACEBOOK_URL = "https://facebook.com/YOUR_PAGE"
-CONTACT_URL = "https://t.me/YOUR_USERNAME"
+FACEBOOK_URL = "https://www.facebook.com/share/1FaBZ3ZCWW/?mibextid=wwXIfr"
+CONTACT_URL = "https://t.me/vanna_sovanna"
 
 RESTART_DELAY = 5  # វិនាទីចាំមុន restart
 # ----------------------------------------------------
@@ -42,20 +42,21 @@ def start_bot():
     @bot.on(events.NewMessage(pattern="(?i).*"))
     async def handler(event):
         sender = await event.get_sender()
-        sender_username = (sender.username or "").lower()
+        sender_username = sender.username or ""
+        sender_first = sender.first_name or ""
+        sender_last = sender.last_name or ""
 
         # មិនឆ្លើយ Owner/Admin
-        if sender_username == OWNER_USERNAME.lower() or sender_username in [u.lower() for u in ADMIN_USERNAMES]:
+        if sender_username.lower() == OWNER_USERNAME.lower() or sender_username.lower() in [u.lower() for u in ADMIN_USERNAMES]:
             return
 
-        # reply ទៅ private ឬ group
-        if not event.out:  # មិន reply តទៅ message របស់ bot
+        if not event.out:  # reply private + group
             await event.reply(
-                "សួស្តី! ជ្រើសរើសប៊ូតុងខាងក្រោម៖",
+                f"សួស្តី! @{sender_username} {sender_last} យើងខ្ញុំនិងតបសារឆាប់ៗនេះ សូមអធ្យាស្រ័យចំពោះការឆ្លើយតបយឺតយ៉ាវ។ I will reply shortly. Sorry for the delayed response. Thank you 💙🙏",
                 buttons=[
                     [
-                        Button.url("📘 Facebook", FACEBOOK_URL),
-                        Button.url("📞 Contact", CONTACT_URL)
+                        Button.url("📘 Facebook Page", FACEBOOK_URL),
+                        Button.url("📞 Admin", CONTACT_URL)
                     ]
                 ]
             )
