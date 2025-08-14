@@ -1,7 +1,7 @@
 import os
 import time
 from threading import Thread
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask
 from telethon import TelegramClient, events, Button
 
@@ -10,13 +10,10 @@ API_ID = int(os.getenv("API_ID", "28013497"))
 API_HASH = os.getenv("API_HASH", "3bd0587beedb80c8336bdea42fc67e27")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "7045596311:AAH7tHcSt16thbFpL0JsVNSEHBvKtjnK8sk")
 
-OWNER_USERNAME = "owner_username"          # username របស់ Owner (គ្មាន @)
-ADMIN_USERNAMES = ["admin1", "admin2"]    # username របស់ Admin (គ្មាន @)
-
 FACEBOOK_URL = "https://www.facebook.com/share/1FaBZ3ZCWW/?mibextid=wwXIfr"
 CONTACT_URL = "https://t.me/vanna_sovanna"
 
-RESTART_DELAY = 5  # វិនាទីចាំមុន restart
+RESTART_DELAY = 5
 # ----------------------------------------------------
 
 # Flask keep-alive
@@ -35,36 +32,61 @@ def keep_alive():
     t.daemon = True
     t.start()
 
-# Telegram bot logic
+# Dictionary ដើម្បីកំណត់ពេលឆ្លើយចុងក្រោយ
+last_reply = {}
+
 def start_bot():
     bot = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
+    async def is_admin_or_owner(chat_id, user_id):
+        try:
+            perms = await bot.get_permissions(chat_id, user_id)
+            return perms.is_admin or perms.is_creator
+        except:
+            return False
+
     @bot.on(events.NewMessage(pattern="(?i).*"))
     async def handler(event):
+        if event.out:
+            return
+
         sender = await event.get_sender()
-        sender_username = sender.username or ""
+        sender_id = sender.id
+        chat_id = event.chat_id
+        sender_username = sender.username
         sender_first = sender.first_name or ""
         sender_last = sender.last_name or ""
 
-        # មិនឆ្លើយ Owner/Admin
-        if sender_username.lower() == OWNER_USERNAME.lower() or sender_username.lower() in [u.lower() for u in ADMIN_USERNAMES]:
+        # មិនឆ្លើយ Admin/Owner
+        if await is_admin_or_owner(chat_id, sender_id):
             return
 
-        if not event.out:  # reply private + group
-            await event.reply(
-                f"សួស្តី! @{sender_username} {sender_last} យើងខ្ញុំនិងតបសារឆាប់ៗនេះ សូមអធ្យាស្រ័យចំពោះការឆ្លើយតបយឺតយ៉ាវ។ I will reply shortly. Sorry for the delayed response. Thank you 💙🙏",
-                buttons=[
-                    [
-                        Button.url("📘 Facebook Page", FACEBOOK_URL),
-                        Button.url("📞 Admin", CONTACT_URL)
-                    ]
+        # មិនឆ្លើយលើស ១ដងក្នុង១ថ្ងៃ
+        now = datetime.now()
+        if sender_id in last_reply and now - last_reply[sender_id] < timedelta(days=1):
+            return
+        last_reply[sender_id] = now
+
+        # Logic username / last name
+        if sender_username:
+            display_name = f"@{sender_username} {sender_last}"
+        else:
+            display_name = sender_last if sender_last else sender_first
+
+        await event.reply(
+            f"សួស្តី! {display_name} យើងខ្ញុំនឹងតបសារឆាប់ៗនេះ សូមអធ្យាស្រ័យចំពោះការឆ្លើយយឺត។ I will reply shortly. Thank you 💙🙏",
+            buttons=[
+                [
+                    Button.url("📘 Facebook Page", FACEBOOK_URL),
+                    Button.url("📞 Admin", CONTACT_URL)
                 ]
-            )
+            ]
+        )
 
     print(f"[{datetime.now()}] Bot started and running...")
     bot.run_until_disconnected()
 
-# Watchdog internal loop
+# Watchdog loop
 def run_with_watchdog():
     keep_alive()
     while True:
