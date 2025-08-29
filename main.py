@@ -1,4 +1,5 @@
 import os
+import re
 import time
 from threading import Thread
 from datetime import datetime, timedelta
@@ -32,8 +33,14 @@ def keep_alive():
     t.daemon = True
     t.start()
 
-# Dictionary ដើម្បីកំណត់ពេលឆ្លើយចុងក្រោយ
+# Dictionary to track last reply time per user
 last_reply = {}
+
+# Regex to detect URLs
+URL_PATTERN = re.compile(r"(https?://|www\.)\S+", re.IGNORECASE)
+
+# Spam/ref keywords
+BAD_WORDS = ["ref_", "startapp=", "promo code", "gift battle", "win iphone", "t.me/"]
 
 def start_bot():
     bot = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
@@ -45,25 +52,22 @@ def start_bot():
         except:
             return False
 
-    # ពាក្យហាម spam/ref
-    BAD_WORDS = ["ref_", "startapp=", "promo code", "gift battle", "win iphone", "t.me/"]
-
-    @bot.on(events.NewMessage(pattern="(?i).*"))
+    @bot.on(events.NewMessage(pattern=".*"))
     async def handler(event):
         if event.out:
-            return
+            return  # Ignore messages sent by the bot itself
 
         sender = await event.get_sender()
         sender_id = sender.id
         chat_id = event.chat_id
 
-        # មិនឆ្លើយ Admin/Owner
+        # Skip Admins/Owners
         if await is_admin_or_owner(chat_id, sender_id):
             return
 
         text = event.raw_text.lower()
 
-        # ✅ បើជាសារ spam/ref → delete ហើយ kick user
+        # ------------------ DELETE SPAM/REF ------------------
         if any(bad in text for bad in BAD_WORDS):
             try:
                 await event.delete()
@@ -73,13 +77,21 @@ def start_bot():
                 print(f"[{datetime.now()}] Failed to delete/kick spammer: {e}")
             return
 
-        # មិនឆ្លើយលើស ១ដងក្នុង១ថ្ងៃ
+        # ------------------ DELETE LINKS ------------------
+        if URL_PATTERN.search(event.raw_text):
+            try:
+                await event.delete()
+                print(f"[{datetime.now()}] Deleted message with link from {sender_id}")
+            except Exception as e:
+                print(f"[{datetime.now()}] Failed to delete message with link: {e}")
+            return
+
+        # ------------------ AUTO-REPLY ONCE PER DAY ------------------
         now = datetime.now()
         if sender_id in last_reply and now - last_reply[sender_id] < timedelta(days=1):
             return
         last_reply[sender_id] = now
 
-        # បង្ហាញឈ្មោះអ្នកផ្ញើ
         sender_username = sender.username
         sender_first = sender.first_name or ""
         sender_last = sender.last_name or ""
@@ -102,7 +114,7 @@ def start_bot():
     print(f"[{datetime.now()}] Bot started and running...")
     bot.run_until_disconnected()
 
-# Watchdog loop
+# Watchdog loop to auto-restart bot on errors
 def run_with_watchdog():
     keep_alive()
     while True:
