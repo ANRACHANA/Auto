@@ -9,8 +9,7 @@ from telethon import TelegramClient, events, Button
 # ---------------------- CONFIG ----------------------
 API_ID = int(os.getenv("API_ID", "28013497"))
 API_HASH = os.getenv("API_HASH", "3bd0587beedb80c8336bdea42fc67e27")
-BOT_TOKEN = os.getenv("BOT_TOKEN",
-                      "7743936268:AAF7thUNZlCx5nSZnvdXG3t2XF2BbcYpEw8")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "7743936268:AAF7thUNZlCx5nSZnvdXG3t2XF2BbcYpEw8")
 
 FACEBOOK_URL = "https://www.facebook.com/share/1FaBZ3ZCWW/?mibextid=wwXIfr"
 CONTACT_URL = "https://t.me/vanna_sovanna"
@@ -132,3 +131,4 @@ def run_with_watchdog():
 
 if __name__ == "__main__":
     run_with_watchdog()
+
