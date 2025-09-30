@@ -5,24 +5,19 @@ from threading import Thread
 from datetime import datetime, timedelta
 from flask import Flask
 from telethon import TelegramClient, events, Button
-from dotenv import load_dotenv
-
-# ---------------------- LOAD ENV ----------------------
-load_dotenv()  # load environment variables from .env
-
-API_ID = int(os.getenv("API_ID"))
-API_HASH = os.getenv("API_HASH")
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-FACEBOOK_URL = os.getenv("FACEBOOK_URL")
-CONTACT_URL = os.getenv("CONTACT_URL")
-RESTART_DELAY = int(os.getenv("RESTART_DELAY", 5))
 
 # ---------------------- CONFIG ----------------------
-BAD_WORDS = ["ref_", "startapp=", "promo code", "gift battle", "win iphone", "t.me/"]
-URL_PATTERN = re.compile(r"(https?://|www\.)\S+", re.IGNORECASE)
-last_reply = {}  # track last reply per user
+API_ID = int(os.getenv("API_ID", "28013497"))
+API_HASH = os.getenv("API_HASH", "3bd0587beedb80c8336bdea42fc67e27")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "7743936268:AAF7thUNZlCx5nSZnvdXG3t2XF2BbcYpEw8")
 
-# ---------------------- FLASK KEEP-ALIVE ----------------------
+FACEBOOK_URL = "https://www.facebook.com/share/1FaBZ3ZCWW/?mibextid=wwXIfr"
+CONTACT_URL = "https://t.me/vanna_sovanna"
+
+RESTART_DELAY = 5
+# ----------------------------------------------------
+
+# Flask keep-alive
 app = Flask(__name__)
 
 @app.route("/")
@@ -38,7 +33,15 @@ def keep_alive():
     t.daemon = True
     t.start()
 
-# ---------------------- TELEGRAM BOT ----------------------
+# Dictionary to track last reply time per user
+last_reply = {}
+
+# Regex to detect URLs
+URL_PATTERN = re.compile(r"(https?://|www\.)\S+", re.IGNORECASE)
+
+# Spam/ref keywords
+BAD_WORDS = ["ref_", "startapp=", "promo code", "gift battle", "win iphone", "t.me/"]
+
 def start_bot():
     bot = TelegramClient('bot_session', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
 
@@ -52,7 +55,7 @@ def start_bot():
     @bot.on(events.NewMessage(pattern=".*"))
     async def handler(event):
         if event.out:
-            return  # ignore bot's own messages
+            return  # Ignore messages sent by the bot itself
 
         sender = await event.get_sender()
         sender_id = sender.id
@@ -92,7 +95,10 @@ def start_bot():
         sender_username = sender.username
         sender_first = sender.first_name or ""
         sender_last = sender.last_name or ""
-        display_name = f"@{sender_username}" if sender_username else sender_first
+        if sender_username:
+            display_name = f"@{sender_username} {sender_last}"
+        else:
+            display_name = sender_last if sender_last else sender_first
 
         await event.reply(
             f"សួស្តី! {display_name} យើងខ្ញុំនឹងតបសារឆាប់ៗនេះ "
@@ -108,7 +114,7 @@ def start_bot():
     print(f"[{datetime.now()}] Bot started and running...")
     bot.run_until_disconnected()
 
-# ---------------------- WATCHDOG ----------------------
+# Watchdog loop to auto-restart bot on errors
 def run_with_watchdog():
     keep_alive()
     while True:
@@ -119,6 +125,5 @@ def run_with_watchdog():
             print(f"[{datetime.now()}] Restarting bot in {RESTART_DELAY} seconds...")
             time.sleep(RESTART_DELAY)
 
-# ---------------------- MAIN ----------------------
 if __name__ == "__main__":
     run_with_watchdog()
