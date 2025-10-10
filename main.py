@@ -33,8 +33,10 @@ def keep_alive():
     t.daemon = True
     t.start()
 
-# Dictionary to track last reply time per user
+# Track last bot reply per user
 last_reply = {}
+# Track if admin replied to user
+admin_replied = {}
 
 # Regex to detect URLs
 URL_PATTERN = re.compile(r"(https?://|www\.)\S+", re.IGNORECASE)
@@ -52,10 +54,18 @@ def start_bot():
         except:
             return False
 
+    # Detect when admin replies to a user (so bot stops replying)
+    @bot.on(events.NewMessage(outgoing=True))
+    async def track_admin_reply(event):
+        if event.is_private:
+            user_id = event.chat_id
+            admin_replied[user_id] = True
+            print(f"[{datetime.now()}] Admin replied to {user_id} -> stop auto replies")
+
     @bot.on(events.NewMessage(pattern=".*"))
     async def handler(event):
         if event.out:
-            return  # Ignore messages sent by the bot itself
+            return  # Ignore bot's own messages
 
         sender = await event.get_sender()
         sender_id = sender.id
@@ -63,6 +73,10 @@ def start_bot():
 
         # Skip Admins/Owners
         if await is_admin_or_owner(chat_id, sender_id):
+            return
+
+        # If admin already replied to this user -> stop replying permanently
+        if admin_replied.get(sender_id, False):
             return
 
         text = event.raw_text.lower()
@@ -86,30 +100,48 @@ def start_bot():
                 print(f"[{datetime.now()}] Failed to delete message with link: {e}")
             return
 
-        # ------------------ AUTO-REPLY ONCE PER DAY ------------------
+        # ------------------ AUTO-REPLY LOGIC ------------------
         now = datetime.now()
-        if sender_id in last_reply and now - last_reply[sender_id] < timedelta(days=1):
-            return
-        last_reply[sender_id] = now
+        last_time = last_reply.get(sender_id, None)
+        reply_count = last_reply.get(f"{sender_id}_count", 0)
 
-        sender_username = sender.username
+        sender_username = f"@{sender.username}" if sender.username else ""
         sender_first = sender.first_name or ""
         sender_last = sender.last_name or ""
-        if sender_username:
-            display_name = f"@{sender_username} {sender_last}"
-        else:
-            display_name = sender_last if sender_last else sender_first
+        display_name = f"{sender_username} {sender_last or sender_first}".strip()
 
-        await event.reply(
-            f"សួស្តី! {display_name} យើងខ្ញុំនឹងតបសារឆាប់ៗនេះ "
-            f"សូមអធ្យាស្រ័យចំពោះការឆ្លើយយឺត។ I will reply shortly. Thank you 💙🙏",
-            buttons=[
-                [
-                    Button.url("📘 Facebook Page", FACEBOOK_URL),
-                    Button.url("📞 Admin", CONTACT_URL)
+        # Reset count after 1 day
+        if last_time and now - last_time >= timedelta(days=1):
+            reply_count = 0
+
+        # First auto reply
+        if reply_count == 0:
+            await event.reply(
+                f"សួស្តី! {display_name} យើងខ្ញុំនឹងតបសារឆាប់ៗនេះ "
+                f"សូមអធ្យាស្រ័យចំពោះការឆ្លើយយឺត។ I will reply shortly. Thank you 💙🙏",
+                buttons=[
+                    [
+                        Button.url("📘 Facebook Page", FACEBOOK_URL),
+                        Button.url("📞 Admin", CONTACT_URL)
+                    ]
                 ]
-            ]
-        )
+            )
+            last_reply[sender_id] = now
+            last_reply[f"{sender_id}_count"] = 1
+            admin_replied[sender_id] = False
+            return
+
+        # Second auto reply (if admin hasn't replied yet)
+        elif reply_count == 1:
+            await event.reply(
+                f"សូមអធ្យាស្រ័យ {display_name} ខាងខ្ញុំនឹងតបអ្នកឆាប់ៗនេះ 🙏💙"
+            )
+            last_reply[sender_id] = now
+            last_reply[f"{sender_id}_count"] = 2
+            return
+
+        # Otherwise, ignore further messages
+        return
 
     print(f"[{datetime.now()}] Bot started and running...")
     bot.run_until_disconnected()
