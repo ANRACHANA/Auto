@@ -115,12 +115,14 @@ def start_bot():
         if sender_id in last_reply and now - last_reply[sender_id] < timedelta(days=1):
             if reply_count[sender_id] == 2:
                 await event.reply(
-                    f"សូមអធ្យាស្រ័យ {sender_username} {sender_last} 🙏\n\n"
-                    f"អ្នកអាចទំនាក់ទំនង Admin ផ្ទាល់សម្រាប់សាកសួរ។\n\n"
-                    f"សាររបស់អ្នក៖ “{text}”\n\nសូមអរគុណ 💙",
+                    f"សូមអធ្យាស្រ័យ {sender_username} {sender_last} 🙏\n"
+                    f"អ្នកអាចទំនាក់ទំនង Admin ផ្ទាល់សម្រាប់សាកសួរ។\n"
+                    f"សាររបស់អ្នក៖ “{text}” ",
                     buttons=[
-                        [Button.url("📞 ទាក់ទង Admin", CONTACT_URL)],
-                        [Button.url("📘 Facebook Page", FACEBOOK_URL)]
+                        [
+                        Button.url("📞 ទាក់ទង Admin", CONTACT_URL),
+                        Button.url("📘 Facebook Page", FACEBOOK_URL)
+                      ]
                     ]
                 )
             return
@@ -129,7 +131,7 @@ def start_bot():
         last_reply[sender_id] = now
         await event.reply(
             f"សួស្តី! {sender_username} {sender_last} 👋\n"
-            f"យើងខ្ញុំនឹងតបសារឆាប់ៗនេះ សូមអធ្យាស្រ័យចំពោះការឆ្លើយយឺត 🙏",
+            f"សូមអធ្យាស្រ័យចំពោះការឆ្លើយយឺត។ I will reply shortly. Thank you 💙🙏",
             buttons=[
                 [
                     Button.url("📘 Facebook Page", FACEBOOK_URL),
@@ -159,3 +161,4 @@ def run_with_watchdog():
 
 if __name__ == "__main__":
     run_with_watchdog()
+
