@@ -131,7 +131,7 @@ def start_bot():
         last_reply[sender_id] = now
         await event.reply(
             f"សួស្តី! {sender_username} {sender_last} 👋\n"
-            f"សូមអធ្យាស្រ័យចំពោះការឆ្លើយយឺត។ I will reply shortly. Thank you 💙🙏",
+            f"យើងខ្ញុំនឹងតបសារឆាប់ៗនេះ សូមអធ្យាស្រ័យចំពោះការឆ្លើយយឺត។ I will reply shortly. Thank you 💙🙏",
             buttons=[
                 [
                     Button.url("📘 Facebook Page", FACEBOOK_URL),
@@ -161,4 +161,5 @@ def run_with_watchdog():
 
 if __name__ == "__main__":
     run_with_watchdog()
+
 
